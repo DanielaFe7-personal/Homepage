@@ -1,0 +1,1257 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Daniela F. Milón-Flores — Data Scientist | Machine Learning & Knowledge Graphs" />
+  <title>Daniela F. Milón-Flores</title>
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <style>
+    :root{
+      --bg:#ffffff;
+      --ink:#0f172a;
+      --muted:#475569;
+      --muted2:#64748b;
+
+      --surface:#ffffff;
+      --surface2:#f6f7fb;
+      --border:rgba(15,23,42,.12);
+
+      --radius: 18px;
+      --accent:#C97E78;      /* stronger rose-gold */
+      --accent-hover:#B86963;
+
+      --peru: #C97E78;
+      --brazil: #2E8B57;
+      --france: #4C6FFF;
+
+      --shadow: 0 18px 45px rgba(15,23,42,.08);
+      --shadow-soft: 0 10px 24px rgba(15,23,42,.07);
+
+      --max: 1040px;
+
+      /* Fix: used throughout */
+      --card:#ffffff;
+    }
+
+    *{ box-sizing:border-box; }
+    html, body{ height:100%; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      color: var(--ink);
+      line-height: 1.6;
+      background: var(--bg);
+      overflow-x: hidden;
+    }
+
+    /* Subtle feminine background icons (camera, plane, coffee, laptop, KG nodes, music note) */
+    body::before{
+      content:"";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: -1;
+      opacity: 0.11;
+      background-repeat: repeat;
+      background-size: 320px 320px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320' viewBox='0 0 320 320'%3E%3Cg fill='none' stroke='%23C97E78' stroke-opacity='0.8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3C!-- camera --%3E%3Cpath d='M48 66h26l7-10h32l7 10h26a10 10 0 0 1 10 10v56a10 10 0 0 1-10 10H48a10 10 0 0 1-10-10V76a10 10 0 0 1 10-10z'/%3E%3Ccircle cx='96' cy='104' r='18'/%3E%3Cpath d='M62 78h16'/%3E%3C!-- plane --%3E%3Cpath d='M232 62l-70 34 38 10 10 38 34-70z'/%3E%3Cpath d='M162 96l-22 10'/%3E%3C!-- coffee cup --%3E%3Cpath d='M62 224h58v22a18 18 0 0 1-18 18H80a18 18 0 0 1-18-18v-22z'/%3E%3Cpath d='M120 232h12a14 14 0 0 1 0 28h-12'/%3E%3Cpath d='M78 210c-8-10 6-18 0-28'/%3E%3Cpath d='M96 210c-8-10 6-18 0-28'/%3E%3C!-- laptop --%3E%3Crect x='190' y='206' width='82' height='54' rx='8'/%3E%3Cpath d='M180 268h102'/%3E%3Cpath d='M205 260h52'/%3E%3C!-- knowledge graph nodes --%3E%3Ccircle cx='220' cy='140' r='6'/%3E%3Ccircle cx='254' cy='156' r='6'/%3E%3Ccircle cx='238' cy='180' r='6'/%3E%3Ccircle cx='206' cy='176' r='6'/%3E%3Cpath d='M220 140l34 16'/%3E%3Cpath d='M254 156l-16 24'/%3E%3Cpath d='M238 180l-32-4'/%3E%3Cpath d='M206 176l14-36'/%3E%3C!-- music note --%3E%3Ccircle cx='138' cy='156' r='8'/%3E%3Cpath d='M146 156V118l40-8v38'/%3E%3Ccircle cx='186' cy='148' r='8'/%3E%3C/g%3E%3C/svg%3E");
+      filter: blur(0.1px);
+    }
+
+    a{ color: inherit; text-decoration:none; }
+    a:hover{ text-decoration: underline; text-underline-offset: 3px; }
+
+    .skip{
+      position:absolute; left:-999px; top:auto; width:1px; height:1px; overflow:hidden;
+    }
+    .skip:focus{
+      position:fixed; left:16px; top:16px; width:auto; height:auto; padding:10px 12px;
+      background: var(--card);
+      border:1px solid var(--border);
+      border-radius: 12px; z-index: 9999;
+      box-shadow: var(--shadow);
+    }
+
+    /* Header */
+    header{
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(255,255,255,.86);
+      backdrop-filter: saturate(1.05) blur(10px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav{
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 14px 18px;
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .brand{
+      display:flex; align-items:center; gap:10px;
+      font-weight: 800;
+      letter-spacing:.2px;
+      white-space: nowrap;
+    }
+
+    .dot{
+      width: 10px; height: 10px; border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 0 5px rgba(201,126,120,.18);
+      flex:0 0 auto;
+    }
+
+    .navlinks{
+      display:flex;
+      gap: 6px;
+      align-items:center;
+      flex-wrap: wrap;
+      justify-content:flex-end;
+    }
+
+    nav a{
+      font-size: .95rem;
+      color: var(--muted);
+      padding: 8px 10px;
+      border-radius: 10px;
+    }
+    nav a:hover{
+      background: rgba(201,126,120,.10);
+      text-decoration:none;
+      color: var(--ink);
+    }
+
+    /* Main layout */
+    main{
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 0 18px 26px;
+    }
+
+    /* Cards */
+    .card{
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.92);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-soft);
+    }
+    @keyframes scroll{
+      from{ transform: translateX(0); }
+      to{ transform: translateX(-50%); }
+    }
+
+    /* Hero */
+    .hero{ margin-top: 22px; }
+
+    .hero-grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr; /* equal width */
+      gap: 16px;
+      align-items: stretch; /* equal height */
+    }
+
+    .hero-main{
+      padding: 16px 18px;
+      display:flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 12px;
+      height: 100%;
+    }
+
+    .photo-card{
+      padding: 12px;
+      display:flex;
+      flex-direction: column;
+      gap: 10px;
+      height: 100%;
+    }
+
+    .portrait{
+      width: 100%;
+      aspect-ratio: 4 / 5;
+      max-height: 420px;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(15,23,42,.03), rgba(15,23,42,.01));
+    }
+
+    .portrait img{
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display:block;
+    }
+
+    .photo-meta .name{ margin: 0; font-weight: 900; letter-spacing: -.2px; }
+    .photo-meta .meta{ margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+
+    .mini-row{ display:flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .mini-pill{
+      font-size: 12px;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      background: rgba(15,23,42,.02);
+      padding: 6px 10px;
+      border-radius: 999px;
+    }
+
+    h1{
+      margin: 0;
+      font-size: clamp(30px, 4vw, 44px);
+      line-height: 1.12;
+      letter-spacing: -.4px;
+    }
+
+    .subtitle{
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+      max-width: 70ch;
+      text-align: justify;
+    }
+
+    .cta{
+      display:flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.9);
+      color: var(--ink);
+      font-weight: 700;
+      font-size: 14px;
+      text-decoration:none;
+      transition: transform .12s ease, background .12s ease, border-color .12s ease;
+    }
+    .btn:hover{
+      text-decoration:none;
+      transform: translateY(-1px);
+      background: rgba(15,23,42,.02);
+      border-color: rgba(15,23,42,.18);
+    }
+    .btn.primary{
+      border-color: rgba(201,126,120,.42);
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn.primary:hover{
+      background: var(--accent-hover);
+      border-color: rgba(201,126,120,.55);
+    }
+
+    .cv-download{
+      margin-top:18px;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .cv-label{
+      font-size:14px;
+      color:var(--muted);
+      font-weight:600;
+    }
+
+    .cv-download{
+      margin-top:18px;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .cv-label{
+      font-size:14px;
+      color:var(--muted);
+      font-weight:600;
+    }
+
+    .cv-download{
+      margin-top:20px;
+      display:flex;
+      align-items:center;
+      gap:14px;
+      flex-wrap:wrap;
+    }
+
+    .cv-label{
+      font-size:14px;
+      color:var(--muted);
+      font-weight:600;
+    }
+
+    .cv-btn{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-weight:600;
+    }
+
+
+    /* Sections */
+    section{ margin-top: 18px; }
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 14px;
+    }
+    .col-6{ grid-column: span 6; }
+    .col-4{ grid-column: span 4; }
+    .col-12{ grid-column: span 12; }
+
+    @media (max-width: 900px){
+      .hero-grid{ grid-template-columns: 1fr; }
+      .col-6, .col-4{ grid-column: span 12; }
+    }
+
+    .section-card{ padding: 18px; }
+    .section-card h2{
+      margin: 0 0 8px;
+      font-size: 18px;
+      letter-spacing: .1px;
+    }
+    .section-card p{
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .tagrow{
+      display:flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .tag{
+      border: 1px solid var(--border);
+      background: rgba(15,23,42,.02);
+      padding: 6px 10px;
+      border-radius: 999px;
+      color: var(--muted2);
+      font-size: 12px;
+    }
+
+    /* About add-ons */
+    .about-grid{
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 14px;
+      margin-top: 12px;
+      margin-bottom: 6px;
+    }
+    @media (max-width: 900px){
+      .about-grid{ grid-template-columns: 1fr; }
+    }
+
+    .about-box{
+      border: 1px solid var(--border);
+      background: rgba(246,247,251,.88);
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: var(--shadow-soft);
+    }
+    .about-box h3{
+      margin: 0 0 8px;
+      font-size: 14px;
+      letter-spacing: .2px;
+      color: var(--ink);
+    }
+    .about-note{
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 12.5px;
+    }
+    .about-foot{
+      margin: 10px 0 0;
+      color: var(--muted2);
+      font-size: 12px;
+    }
+
+    /* Languages list */
+    .lang-list{
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 10px;
+    }
+    .lang-list li{
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap: 6px 10px;
+      align-items: center;
+    }
+    .lang-name{
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--ink);
+    }
+    .lang-level{
+      font-size: 12px;
+      color: var(--muted2);
+      font-weight: 600;
+      justify-self: end;
+    }
+    .lang-bar{
+      grid-column: 1 / -1;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(15,23,42,.08);
+      overflow: hidden;
+      border: 1px solid rgba(15,23,42,.10);
+    }
+    .lang-bar .fill{
+      display:block;
+      height: 100%;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--accent) 78%, #ffffff);
+    }
+
+    /* Donut */
+    .donut-wrap{
+      display:flex;
+      align-items:center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .donut{
+      width: 130px;
+      height: 130px;
+      transform: rotate(-90deg);
+      flex: 0 0 auto;
+    }
+    .donut-track{
+      fill: none;
+      stroke: rgba(15,23,42,.10);
+      stroke-width: 12;
+    }
+    .donut-seg{
+      fill: none;
+      stroke-width: 12;
+      stroke-linecap: round;
+    }
+    .donut-seg.bsc{ stroke: color-mix(in srgb, var(--accent) 80%, #ffffff); }
+    .donut-seg.msc{ stroke: rgba(76,111,255,.78); }
+    .donut-seg.phd{ stroke: rgba(46,139,87,.72); }
+
+    .donut-center{
+      transform: rotate(90deg);
+      font-weight: 800;
+      font-size: 18px;
+      fill: var(--ink);
+    }
+    .donut-sub{
+      transform: rotate(90deg);
+      font-weight: 600;
+      font-size: 10.5px;
+      fill: var(--muted2);
+      letter-spacing: .2px;
+    }
+
+    .donut-legend{
+      display:grid;
+      gap: 6px;
+      min-width: 180px;
+    }
+    .drow{
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+    .swatch{
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display:inline-block;
+      border: 1px solid rgba(15,23,42,.14);
+    }
+    .swatch.bsc{ background: color-mix(in srgb, var(--accent) 80%, #ffffff); }
+    .swatch.msc{ background: rgba(76,111,255,.78); }
+    .swatch.phd{ background: rgba(46,139,87,.72); }
+    .yrs{
+      margin-left:auto;
+      font-weight: 800;
+      color: var(--ink);
+    }
+
+
+    /* MANTRAS: one-row auto animation */
+    .mantras-card{
+      padding: 18px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .mantras-head{
+      display:flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .mantras-head h2{
+      margin: 0;
+      font-size: 18px;
+    }
+    .mantras-head p{
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .ticker{
+      position: relative;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      overflow: hidden;
+    }
+
+    .ticker::before,
+    .ticker::after{
+      content:"";
+      position:absolute;
+      top:0; bottom:0;
+      width: 78px;
+      z-index: 2;
+      pointer-events:none;
+    }
+    .ticker::before{
+      left:0;
+      background: linear-gradient(90deg, var(--surface2), rgba(246,247,251,0));
+    }
+    .ticker::after{
+      right:0;
+      background: linear-gradient(270deg, var(--surface2), rgba(246,247,251,0));
+    }
+
+    .track{
+      display:flex;
+      gap: 12px;
+      padding: 12px;
+      width: max-content;
+      animation: scroll 30s linear infinite;
+    }
+    .ticker:hover .track{ animation-play-state: paused; }
+
+    .mantra{
+      min-width: 420px;
+      max-width: 520px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      padding: 14px 14px 12px;
+      box-shadow: var(--shadow-soft);
+      position: relative;
+    }
+
+    @media (max-width: 520px){
+      .mantra{ min-width: 320px; }
+    }
+
+    .m-top{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      margin-bottom: 8px;
+      color: var(--muted2);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .25px;
+      text-transform: uppercase;
+    }
+
+    .spark{
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(122,62,69,.25);
+      box-shadow: 0 0 0 5px rgba(122,62,69,.12);
+      flex:0 0 auto;
+    }
+
+    blockquote{
+      margin: 0;
+      color: var(--ink);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+    .author{
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+
+    /* Footer */
+    footer{
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 22px 18px 32px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 14px;
+    }
+    footer a{ color: var(--muted); }
+
+    /* Leaflet visual alignment */
+    .leaflet-container{ font-family: inherit; }
+    .leaflet-control-zoom a{
+      border-radius: 10px !important;
+      border: 1px solid rgba(15,23,42,.14) !important;
+      box-shadow: none !important;
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      .btn{ transition: none; }
+    }
+  </style>
+</head>
+
+<body>
+  <a class="skip" href="#content">Skip to content</a>
+
+  <header>
+    <nav class="nav" aria-label="Primary navigation">
+      <a class="brand" href="#">
+        <span class="dot" aria-hidden="true"></span>
+        <span>Daniela F. Milón-Flores</span>
+      </a>
+
+      <div class="navlinks">
+        <a href="#about">About Me</a>
+        <!-- <a href="#work">Work</a>-->
+        <a href="#projects">Projects</a>
+        <a href="#contact">Contact</a>
+      </div>
+    </nav>
+  </header>
+
+  <main id="content">
+    <!-- HERO -->
+    <section class="hero" aria-label="Hero">
+      <div class="hero-grid">
+        <!-- Big photo card -->
+        <aside class="card photo-card" aria-label="Profile">
+          <div class="portrait" aria-label="Profile picture">
+            <img
+              src="dani.jpg"
+              alt="Portrait of Daniela F. Milón-Flores"
+              onerror="this.style.display='none';"
+            />
+          </div>
+
+          <div class="photo-meta">
+            <p class="name">Daniela F. Milón-Flores</p>
+            <p class="meta">Grenoble, France. </p>
+
+            <div class="mini-row" aria-label="Quick highlights">
+              <span class="mini-pill">PhD at UGA</span>
+              <span class="mini-pill">ML + NLP + KG</span>
+              <span class="mini-pill">Semantic Web</span>
+              <span class="mini-pill">Artificial Intelligence</span>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Main hero text -->
+        <div class="card hero-main">
+          <h1>Designing AI systems for complex data analysis.</h1>
+
+          <p class="subtitle">
+            I work across Machine Learning, Natural Language Processing, and Knowledge Graphs to transform heterogeneous data into interpretable representations, decision-ready insights, and robust analytical pipelines.
+          </p>
+
+          <p class="subtitle">
+            I’m a proactive and enthusiastic person who enjoys teamwork and is always curious to learn something new.
+          </p>
+
+
+          <div class="cta">
+            <a class="btn primary" href="#projects">See projects</a>
+            <a class="btn" href="#contact">Contact</a>
+            <a class="btn primary" href="https://www.linkedin.com/in/milon-flores/" aria-label="Open LinkedIn">LinkedIn</a>
+            <a class="btn" href="https://scholar.google.fr/citations?user=pCAl8IgAAAAJ&hl=es&oi=ao" aria-label="Open Google Scholar">Scholar</a>
+          </div>
+
+          <div class="cv-download">
+            <span class="cv-label">Download CV</span>
+
+            <a class="btn cv-btn" href="Daniela_Milon_Flores_CV_EN.pdf" download>
+              🇬🇧 English
+            </a>
+
+            <a class="btn cv-btn" href="Daniela_Milon_Flores_CV_FR.pdf" download>
+              🇫🇷 Français
+            </a>
+          </div>
+
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section id="about">
+      <div class="card section-card">
+        <h2>About Me</h2>
+        <p  style="text-align: justify;">
+          I recently completed my PhD in Computer Science at Université Grenoble Alpes.
+          My work focused on making environmental trajectories easier to interpret by using Semantic Web technologies and Knowledge Graphs to add structure and meaning to Earth Observation time series.
+          From data modeling to implementation, I built an end-to-end framework that turns raw data into semantic patterns.
+        </p>
+
+        <p  style="text-align: justify;">
+          Before that, during my Master’s degree, I worked on the early detection of online grooming in conversational data.
+          I developed a framework combining natural language processing and machine learning to identify behavioral patterns under limited contextual information, and evaluated its performance using standard classification metrics.
+        </p>
+
+        <p  style="text-align: justify;">
+          Beyond research, I enjoy live concerts, traveling, and photography.
+          I like playing my guitar, discovering new places, observing details, and capturing moments through my camera.
+          For me, curiosity connects both science and everyday life.
+        </p>
+
+        <div class="about-grid" aria-label="Languages and timeline">
+          <div class="about-box" aria-label="Languages">
+            <h3>Languages</h3>
+            <ul class="lang-list">
+              <li>
+                <span class="lang-name">Spanish</span>
+                <span class="lang-level">Native</span>
+                <span class="lang-bar" aria-hidden="true"><span class="fill" style="width: 100%"></span></span>
+              </li>
+              <li>
+                <span class="lang-name">English</span>
+                <span class="lang-level">Professional</span>
+                <span class="lang-bar" aria-hidden="true"><span class="fill" style="width: 90%"></span></span>
+              </li>
+              <li>
+                <span class="lang-name">Portuguese</span>
+                <span class="lang-level">Professional</span>
+                <span class="lang-bar" aria-hidden="true"><span class="fill" style="width: 90%"></span></span>
+              </li>
+              <li>
+                <span class="lang-name">French</span>
+                <span class="lang-level">Intermediate</span>
+                <span class="lang-bar" aria-hidden="true"><span class="fill" style="width: 75%"></span></span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="about-box" aria-label="Time investment across degrees">
+            <h3>Time at a glance</h3>
+            <p class="about-note">Years spent across my academic projects.</p>
+
+            <div class="donut-wrap">
+                <svg class="donut" viewBox="0 0 120 120" role="img" aria-label="Donut chart: Bachelors 5 years, Masters 2 years, PhD 3 years">
+                  <circle class="donut-track" cx="60" cy="60" r="46" />
+
+                  <!-- total = 10 years -->
+                  <circle class="donut-seg bsc" cx="60" cy="60" r="46"
+                    style="stroke-dasharray: 144.52 289.03; stroke-dashoffset: 0;" />
+
+                  <circle class="donut-seg msc" cx="60" cy="60" r="46"
+                    style="stroke-dasharray: 57.81 289.03; stroke-dashoffset: -144.52;" />
+
+                  <circle class="donut-seg phd" cx="60" cy="60" r="46"
+                    style="stroke-dasharray: 86.71 289.03; stroke-dashoffset: -202.33;" />
+
+                  <text x="60" y="58" text-anchor="middle" class="donut-center">10</text>
+                  <text x="60" y="76" text-anchor="middle" class="donut-sub">years</text>
+                </svg>
+
+                <div class="donut-legend" aria-label="Donut chart legend">
+                  <div class="drow"><span class="swatch bsc"></span> Bachelor’s <span class="yrs">5y</span></div>
+                  <div class="drow"><span class="swatch msc"></span> Master’s <span class="yrs">2y</span></div>
+                  <div class="drow"><span class="swatch phd"></span> PhD <span class="yrs">3y</span></div>
+                </div>
+              </div>
+
+  
+          </div>
+        </div>
+
+        <div class="tagrow" aria-label="Skills">
+          <span class="tag">Python</span>
+          <span class="tag">C++</span>
+          <span class="tag">NLP</span>
+          <span class="tag">Machine Learning</span>
+          <span class="tag">Neural Networks</span>
+          <span class="tag">Knowledge Graphs</span>
+          <span class="tag">Semantic Web</span>
+          <span class="tag">Time Series Analysis</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- LIVED (MAP) -->
+    <section id="lived" class="section lived-map" aria-label="My Academic Trajectory">
+      <div class="container">
+        <div class="card lived-map-card">
+          <div class="lived-map-head">
+            <h2>My Academic Trajectory</h2>
+            <p>Peru → Brazil → France</p>
+          </div>
+
+          <div id="livedMap" class="lived-map-canvas" aria-label="Map showing lived and visited countries"></div>
+
+          <div class="lived-map-legend" aria-label="Legend">
+            <span class="lived-chip"><span class="map-dot peru" aria-hidden="true"></span> Peru</span>
+            <span class="lived-chip"><span class="map-dot brazil" aria-hidden="true"></span> Brazil</span>
+            <span class="lived-chip"><span class="map-dot france" aria-hidden="true"></span> France</span>
+          </div>
+        </div>
+      </div>
+
+      <style>
+
+
+        /* Scoped styles for the lived map section */
+        #lived.lived-map{ margin-top: 22px; }
+        #lived .container{ max-width: var(--max); margin: 0 auto; }
+
+        #lived .lived-map-card{
+          padding: 14px;
+          overflow: hidden;
+        }
+
+        #lived .lived-map-head{
+          display:flex;
+          align-items: baseline;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 2px 4px 12px;
+        }
+        #lived .lived-map-head h2{
+          margin: 0;
+          font-size: 20px;
+          letter-spacing: .2px;
+        }
+        #lived .lived-map-head p{
+          margin: 0;
+          color: rgba(29,25,48,.72);
+          font-weight: 600;
+          font-size: 14px;
+        }
+
+        #lived .lived-map-canvas{
+          height: clamp(320px, 44vw, 520px);
+          width: 100%;
+          border-radius: 16px;
+          overflow: hidden;
+          border: 1px solid rgba(35,25,55,.14);
+          box-shadow: 0 14px 28px rgba(29,25,48,.10);
+          background: rgba(255,255,255,.55);
+        }
+
+        #lived .lived-map-legend{
+          display:flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          align-items: center;
+          padding: 12px 4px 2px;
+        }
+
+        #lived .lived-chip{
+          display:inline-flex;
+          align-items:center;
+          gap: 8px;
+          padding: 6px 10px;
+          border-radius: 999px;
+          border: 1px solid rgba(35,25,55,.14);
+          background: rgba(255,255,255,.75);
+          box-shadow: 0 8px 18px rgba(29,25,48,.08);
+          font-weight: 650;
+          font-size: 13px;
+          color: rgba(29,25,48,.82);
+        }
+
+        #lived .map-dot{
+          width: 10px;
+          height: 10px;
+          border-radius: 999px;
+          box-shadow: 0 0 0 4px rgba(255,255,255,.8);
+          border: 1px solid rgba(29,25,48,.18);
+          flex: 0 0 auto;
+        }
+        #lived .map-dot.peru{ background: var(--peru); }
+        #lived .map-dot.brazil{ background: var(--brazil); }
+        #lived .map-dot.france{ background: var(--france); }
+
+        /* Make OSM tiles match the page vibe a bit */
+        #lived .leaflet-tile{
+          filter: saturate(0.95) contrast(1.03) brightness(0.98);
+        }
+        #lived .leaflet-control-attribution{
+          opacity: .75;
+          font-size: 11px;
+        }
+
+        /* Footprint icon */
+        .sett-footprint{
+          width: 20px;
+          height: 20px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          transform-origin: 50% 50%;
+          filter: drop-shadow(0 10px 14px rgba(29,25,48,.16));
+          opacity: .95;
+        }
+        .sett-footprint svg{ display:block; }
+      </style>
+
+      <script>
+        (function(){
+          if (window.__livedMapInitialized) return;
+          window.__livedMapInitialized = true;
+
+          if (!window.L || !document.getElementById("livedMap")) return;
+
+          const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+          // Lived cities
+          const peru   = { name: "Peru",   city: "Universidad Católica San Pablo",  latlng: [-16.4090, -71.5375], color: getComputedStyle(document.documentElement).getPropertyValue('--peru').trim() || "#C97E78" };
+          const brazil = { name: "Brazil", city: "Universidade de São Paulo", latlng: [-23.5505, -46.6333], color: getComputedStyle(document.documentElement).getPropertyValue('--brazil').trim() || "#2E8B57" };
+          const france = { name: "France", city: "Université Grenoble Alpes",  latlng: [ 45.1885,   5.7245], color: getComputedStyle(document.documentElement).getPropertyValue('--france').trim() || "#4C6FFF" };
+
+          const map = L.map("livedMap", {
+            zoomControl: false,
+            scrollWheelZoom: false,
+            dragging: true
+          });
+          L.control.zoom({ position: "bottomright" }).addTo(map);
+
+          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 6,
+            minZoom: 2,
+            attribution: "&copy; OpenStreetMap contributors"
+          }).addTo(map);
+
+          // Fit bounds to include lived points
+          const allLatLngs = [peru.latlng, brazil.latlng, france.latlng];
+          map.fitBounds(L.latLngBounds(allLatLngs), { 
+              padding: [24, 24],
+            });
+
+          // Pin for lived countries
+          function pinIcon(color){
+            const svg =
+              '<svg xmlns="http://www.w3.org/2000/svg" width="26" height="38" viewBox="0 0 26 38">'
+              + '<path d="M13 0C7 0 2.2 4.8 2.2 10.8c0 7.7 10.8 27.2 10.8 27.2s10.8-19.5 10.8-27.2C23.8 4.8 19 0 13 0Z" fill="'+color+'" stroke="rgba(15,23,42,.25)" stroke-width="1"/>'
+              + '<circle cx="13" cy="11" r="4.2" fill="white" fill-opacity="0.95"/>'
+              + '</svg>';
+            return L.divIcon({
+              className: "",
+              html: svg,
+              iconSize: [26, 38],
+              iconAnchor: [13, 38],
+              tooltipAnchor: [0, -28]
+            });
+          }
+
+          // Footprint icon (animated trail)
+          function footprintIcon(rotDeg){
+            const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || "#C97E78";
+            const svg =
+              '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">'
+              + '<path d="M9.4 13.7c-1.9 0-3.4 1.4-3.4 3.2 0 2 1.8 3.1 3.7 3.1 2.1 0 3.7-1.2 3.7-3.1 0-1.8-1.6-3.2-4-3.2z" fill="'+accent+'" fill-opacity="0.95"/>'
+              + '<path d="M16.3 3.7c-1.1 0-2 .9-2 2 0 1.2.9 2.1 2 2.1s2-.9 2-2.1c0-1.1-.9-2-2-2z" fill="'+accent+'" fill-opacity="0.85"/>'
+              + '<path d="M14.3 7.9c-1 0-1.8.8-1.8 1.8 0 1 .8 1.8 1.8 1.8s1.8-.8 1.8-1.8c0-1-.8-1.8-1.8-1.8z" fill="'+accent+'" fill-opacity="0.80"/>'
+              + '<path d="M12.6 11.3c-.9 0-1.6.7-1.6 1.6 0 .9.7 1.6 1.6 1.6.9 0 1.6-.7 1.6-1.6 0-.9-.7-1.6-1.6-1.6z" fill="'+accent+'" fill-opacity="0.75"/>'
+              + '</svg>';
+
+            return L.divIcon({
+              className: "",
+              html:
+                '<div class="sett-footprint" style="transform:rotate('+rotDeg+'deg)">' + svg + '</div>',
+              iconSize: [20, 20],
+              iconAnchor: [10, 10]
+            });
+          }
+
+          // Place lived markers
+          [peru, brazil, france].forEach(p => {
+            L.marker(p.latlng, { icon: pinIcon(p.color) })
+              .addTo(map)
+              .bindTooltip(p.city + ", " + p.name, {
+                    direction: (p.name === "France") ? "bottom" : "top",
+                    offset: (p.name === "France") ? [0, 10] : [0, -8],
+                    opacity: 0.95
+                  });
+          });
+
+          // Animated plane from Peru -> Brazil -> France (back to the previous style)
+          if (reduceMotion) return;
+
+          const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || "#C97E78";
+          const route = [peru.latlng, brazil.latlng, france.latlng];
+
+          // Draw route line (soft dashed)
+          const routeLine = L.polyline(route, {
+            color: accent,
+            weight: 3,
+            opacity: 0.55,
+            dashArray: "8 10"
+          }).addTo(map);
+
+          function lerp(a, b, t){ return a + (b - a) * t; }
+
+          function bearing(a, b){
+            const toRad = x => x * Math.PI / 180;
+            const toDeg = x => x * 180 / Math.PI;
+            const lat1 = toRad(a[0]);
+            const lat2 = toRad(b[0]);
+            const dLng = toRad(b[1] - a[1]);
+            const y = Math.sin(dLng) * Math.cos(lat2);
+            const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+            return (toDeg(Math.atan2(y, x)) + 360) % 360;
+          }
+
+          // Plane icon
+          function planeIcon(rotDeg){
+            const svg =
+              '<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none">'
+              + '<path d="M21.5 12.3c.6-.2.6-1.1 0-1.3L3.8 4.3c-.6-.2-1.2.3-1.1.9l1.2 6.3c.1.4.4.7.8.8l6.1 1.2-6.1 1.2c-.4.1-.7.4-.8.8l-1.2 6.3c-.1.6.5 1.1 1.1.9l17.7-6.7Z" fill="'+accent+'" fill-opacity="0.92" stroke="rgba(15,23,42,.22)" stroke-width="1"/>'
+              + '<path d="M4.6 11.9h6.9" stroke="rgba(255,255,255,.88)" stroke-width="1.6" stroke-linecap="round" opacity=".85"/>'
+              + '</svg>';
+
+            return L.divIcon({
+              className: "",
+              html:
+                '<div style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;'
+                + 'transform:rotate('+rotDeg+'deg);transform-origin:50% 50%;'
+                + 'filter: drop-shadow(0 10px 14px rgba(29,25,48,.16));">'
+                + svg
+                + '</div>',
+              iconSize: [30, 30],
+              iconAnchor: [15, 15]
+            });
+          }
+
+          // Animate the plane along the route
+          let seg = 0;
+          let t = 0;
+          const speed = 0.0018; // tweak speed
+          const plane = L.marker(route[0], { icon: planeIcon(0), interactive: false }).addTo(map);
+
+          function step(){
+            const a = route[seg];
+            const b = route[seg + 1];
+
+            if (!b){
+              // loop
+              seg = 0;
+              t = 0;
+              plane.setLatLng(route[0]);
+              requestAnimationFrame(step);
+              return;
+            }
+
+            t += speed;
+            if (t >= 1){
+              t = 0;
+              seg += 1;
+            }
+
+            const lat = lerp(a[0], b[0], t);
+            const lng = lerp(a[1], b[1], t);
+            const ang = bearing(a, b);
+
+            plane.setLatLng([lat, lng]);
+            plane.setIcon(planeIcon(ang));
+
+            requestAnimationFrame(step);
+          }
+
+          requestAnimationFrame(step);
+        })();
+      </script>
+    </section>
+
+    <!-- WORK -->
+
+    <!--
+      <section id="work">
+        <div class="grid">
+          <div class="card section-card col-6">
+            <h2>Work</h2>
+            <ul class="clean" style="margin:0; padding-left:18px; color: var(--muted); font-size: 14px;">
+              <li><strong>Doctoral Researcher</strong> — Université Grenoble Alpes (2022–2025)</li>
+              <li><strong>Research Project</strong> — TRACES (Franco-Swiss)</li>
+              <li><strong>Master’s</strong> — NLP + early detection of online grooming</li>
+            </ul>
+          </div>
+
+          <div class="card section-card col-6">
+            <h2>What I bring</h2>
+            <ul class="clean" style="margin:0; padding-left:18px; color: var(--muted); font-size: 14px;">
+              <li>Structured pipelines: data → features/graphs → model → evaluation.</li>
+              <li>Interpretability-first outputs: patterns, annotations, explainable signals.</li>
+              <li>Comfort with large-scale graph data (12M+ triples).</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      -->
+
+    <!-- PROJECTS -->
+    <section id="projects">
+      <div class="grid">
+        <div class="card section-card col-4">
+          <h2>Project 1 · PhD</h2>
+          <p >PhD project focused on modeling environmental trajectories using Semantic Web technologies and Knowledge Graphs, transforming raw environmental time series into structured and interpretable trajectory representations.</p>
+          <div class="tagrow"><span class="tag">Time Series</span><span class="tag">Knowledge Graphs</span><span class="tag">SW</span></div>
+        </div>
+
+        <div class="card section-card col-4">
+          <h2>Project 2 · Master</h2>
+          <p>Master’s project developed an early detection approach for online grooming in chat conversations by combining natural language processing and machine learning to identify subtle behavioral signals under limited contextual information.</p>
+          <div class="tagrow"><span class="tag">NLP</span><span class="tag">ML</span><span class="tag">Cyber Grooming</span></div>
+        </div>
+
+        <div class="card section-card col-4">
+          <h2>Project 3 · Bachelor</h2>
+          <p>
+            Bachelor’s project developed a methodology to generate audiovisual summaries of literary works by combining NLP-based emotion extraction, emotion-driven music composition, and graph-based animation.
+            </p>
+          <div class="tagrow"><span class="tag">NLP</span><span class="tag">Visualization</span><span class="tag">Music</span></div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- MANTRAS (ONE ROW) -->
+    <section id="mantras">
+      <div class="card mantras-card">
+        <div class="mantras-head">
+          <h2>Mantras I believe in:</h2>
+          <p>Soft reminders when life is intense ✨ (hover to pause)</p>
+        </div>
+
+        <div class="ticker" aria-label="Animated mantra ticker">
+          <!-- The track is duplicated to create a seamless loop -->
+          <div class="track" id="track">
+            <!-- Set 1 -->
+            <div class="mantra">
+              <div class="m-top"><span class="spark" aria-hidden="true"></span> Mantra 1</div>
+              <blockquote>
+                “Serenity to accept the things I cannot change; courage to change the things I can; and wisdom to know the difference.”
+              </blockquote>
+              <div class="author">Serenity mantra</div>
+            </div>
+
+            <div class="mantra">
+              <div class="m-top"><span class="spark" aria-hidden="true"></span> Mantra 2</div>
+              <blockquote>
+                “I believe we can change the world; starting with one smile at a time.”
+              </blockquote>
+              <div class="author">Penélope Perseval</div>
+            </div>
+
+            <div class="mantra">
+              <div class="m-top"><span class="spark" aria-hidden="true"></span> Mantra 3</div>
+              <blockquote>
+                “When in doubt, look intelligent.”
+              </blockquote>
+              <div class="author">Garrison Keillor</div>
+            </div>
+
+            <!-- Set 2 (duplicate for seamless scroll) -->
+            <div class="mantra">
+              <div class="m-top"><span class="spark" aria-hidden="true"></span> Mantra 1 · Serenity</div>
+              <blockquote>
+                “Serenity to accept the things I cannot change; courage to change the things I can; and wisdom to know the difference.”
+              </blockquote>
+              <div class="author">Serenity mantra</div>
+            </div>
+
+            <div class="mantra">
+              <div class="m-top"><span class="spark" aria-hidden="true"></span> Mantra 2</div>
+              <blockquote>
+                “I believe we can change the world; starting with one smile at a time.”
+              </blockquote>
+              <div class="author">Penélope Perseval</div>
+            </div>
+
+            <div class="mantra">
+              <div class="m-top"><span class="spark" aria-hidden="true"></span> Mantra 3</div>
+              <blockquote>
+                “When in doubt, look intelligent.”
+              </blockquote>
+              <div class="author">Garrison Keillor</div>
+            </div>
+          </div>
+        </div>
+
+         <!--  <div class="tagrow" aria-label="Mood tags">
+          <span class="tag">Serenity</span>
+          <span class="tag">Courage</span>
+          <span class="tag">Wisdom</span>
+          <span class="tag">Smile</span>
+          <span class="tag">Confidence</span>
+        </div>
+      </div>
+    </section>  -->
+
+
+
+    <!-- CONTACT -->
+    <section id="contact">
+      <div class="card section-card">
+        <h2>Contact</h2>
+        <p>For collaborations or opportunities, you can reach me via email or LinkedIn.</p>
+        <div class="cta">
+          <a class="btn primary" href="mailto:dmilonflores@gmail.com">Email me</a>
+          <a class="btn" href="https://www.linkedin.com/in/milon-flores/">LinkedIn</a>
+          <a class="btn" href="Daniela_Milon_Flores_CV.pdf" download>CV</a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    © <span id="y"></span> Daniela F. Milón-Flores · <a href="#content">Back to top</a>
+  </footer>
+
+  <script>
+    document.getElementById("y").textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
+
